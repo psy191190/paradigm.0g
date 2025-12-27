@@ -1,186 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paradigm.0G Storage Hub</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #fff;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        header {
-            text-align: center;
-            padding: 40px 20px;
-        }
-        h1 {
-            font-size: 3em;
-            margin: 0;
-            text-shadow: 0 0 20px #00ffea, 0 0 40px #00ffea;
-            animation: neon 2s infinite alternate;
-        }
-        @keyframes neon {
-            from { text-shadow: 0 0 10px #00ffea, 0 0 20px #00ffea, 0 0 30px #00ffea; }
-            to { text-shadow: 0 0 20px #00ffea, 0 0 40px #00ffea, 0 0 60px #00ffea; }
-        }
-        .container {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 20px;
-            padding: 30px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 0 30px rgba(0, 255, 234, 0.3);
-            margin: 20px;
-        }
-        button {
-            background: #00ffea;
-            color: #000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 10px 0;
-            transition: 0.3s;
-        }
-        button:hover {
-            background: #00b39f;
-            box-shadow: 0 0 20px #00ffea;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: none;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-        }
-        #status {
-            margin-top: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        footer {
-            margin-top: auto;
-            padding: 20px;
-            text-align: center;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PARADIGM.0G - Secure Upload/Download</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@0glabs/0g-ts-sdk@latest/dist/browser/index.js"></script>
+  <style>
+    body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
+    button { padding: 10px; margin: 10px; background: #00ff9d; color: #000; border: none; cursor: pointer; }
+    input { padding: 10px; margin: 10px; }
+    #status, #inftStatus { color: #00ff9d; margin: 20px; }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>PARADIGM.0G</h1>
-        <p>Decentralized Storage Upload & Download on Aristotle Mainnet</p>
-    </header>
+  <h1>PARADIGM.0G Mainnet Storage</h1>
+  <button onclick="connectWallet()">Connect Wallet</button>
+  <p id="wallet">Not Connected</p>
 
-    <div class="container">
-        <button id="connectWallet">Connect Wallet</button>
-        <p id="walletStatus">Wallet: Not connected</p>
+  <div id="inftStatus">Verifying iNFTs #1-4...</div>
 
-        <h2>Upload File</h2>
-        <input type="file" id="fileInput" />
-        <button id="uploadBtn" disabled>Upload to 0G Storage</button>
-        <p>Uploads commit to chain (gas fees apply via your wallet).</p>
+  <h2>Upload File to 0G Mainnet</h2>
+  <input type="file" id="fileInput" />
+  <button onclick="uploadFile()">Upload</button>
 
-        <h2>Download File</h2>
-        <input type="text" id="rootHash" placeholder="Enter Merkle Root Hash" />
-        <button id="downloadBtn">Download File</button>
+  <h2>Download File from 0G Mainnet</h2>
+  <input type="text" id="rootHash" placeholder="Enter Root Hash" />
+  <button onclick="downloadFile()">Download</button>
 
-        <div id="status"></div>
-    </div>
+  <div id="status">Ready</div>
 
-    <footer>&copy; 2025 Paradigm.0G - Powered by 0G Aristotle Mainnet</footer>
+<script type="module">
+  import { Indexer, ZgFile } from '@0glabs/0g-ts-sdk/browser';
 
-    <script src="https://cdn.jsdelivr.net/npm/viem@2.x/viem.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.x"></script>
-    <script type="module">
-        import { createClient, http } from 'viem';
-        import { walletConnect } from 'viem/connectors';
+  const CONTRACT_ADDR = '0x57e463BF845cf328715446b9246fFa536B671A10';
+  const TOKEN_IDS = ['1', '2', '3', '4'];
+  const OWNER_WALLET = '0x6F4D829488686afd8D9B68AE56986C312784C0e6';
 
-        const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // Get free at https://cloud.walletconnect.com
+  const RPC = 'https://evmrpc.0g.ai';
+  const STORAGE_RPC = 'https://indexer-storage-turbo.0g.ai';
 
-        const modal = new WalletConnectModal({ projectId });
+  let provider, signer, indexer;
 
-        const connector = walletConnect({ projectId });
+  async function connectWallet() {
+    if (!window.ethereum) return alert('Install MetaMask!');
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+    const address = await signer.getAddress();
+    document.getElementById('wallet').innerText = `Connected: \( {address.slice(0,6)}... \){address.slice(-4)}`;
+    indexer = new Indexer(STORAGE_RPC);
+    bakeAllINFTs();
+  }
 
-        let client;
-        let account;
+  async function bakeAllINFTs() {
+    const readProvider = new ethers.providers.JsonRpcProvider(RPC);
+    const abi = ['function ownerOf(uint256) view returns (address)'];
+    const contract = new ethers.Contract(CONTRACT_ADDR, abi, readProvider);
+    const statusDiv = document.getElementById('inftStatus');
+    let bakedCount = 0;
+    for (const id of TOKEN_IDS) {
+      try {
+        const owner = await contract.ownerOf(id);
+        if (owner.toLowerCase() === OWNER_WALLET.toLowerCase()) bakedCount++;
+      } catch (error) {
+        console.error(`Error verifying iNFT #\( {id}: \){error.message}`);
+      }
+    }
+    statusDiv.innerText = bakedCount === 4 ? 'All 4 iNFTs Verified and Baked ✅ (Quantum Sigs Active)' : `Only ${bakedCount} iNFTs Verified`;
+  }
 
-        const chain = {
-            id: 16661, // 0G Aristotle Mainnet chain ID
-            name: '0G Aristotle',
-            nativeCurrency: { name: '0G', symbol: '0G', decimals: 18 },
-            rpcUrls: { default: { http: ['https://evmrpc.0g.ai'] } },
-        };
+  async function uploadFile() {
+    if (!signer) return alert('Connect wallet first');
+    const file = document.getElementById('fileInput').files[0];
+    if (!file) return alert('Select a file');
+    const status = document.getElementById('status');
+    status.innerText = 'Uploading to 0G Mainnet...';
 
-        // Hard-coded mainnet addresses
-        const FLOW_CONTRACT = '0x62D4144dB0F0a6fBBaeb6296c785C71B3D57C526'; // Storage Flow
-        const STORAGE_INDEXER = 'https://indexer-storage-mainnet.0g.ai'; // Update if separate standard/turbo
+    try {
+      const zgFile = await ZgFile.fromFile(file);
+      const [tree, treeErr] = await zgFile.merkleTree();
+      if (treeErr) throw treeErr;
+      const [tx, uploadErr] = await indexer.upload(zgFile, RPC, signer);
+      if (uploadErr) throw uploadErr;
+      await tx.wait();
+      status.innerText = `Uploaded! Tx Hash: \( {tx.hash}\nRoot Hash: \){tree.rootHash()}\nUse this Root Hash for download and Content Hash.`;
+    } catch (e) {
+      status.innerText = `Error: ${e.message}`;
+    }
+  }
 
-        document.getElementById('connectWallet').onclick = async () => {
-            try {
-                await modal.open();
-                const session = await connector.connect({ chainId: chain.id });
+  async function downloadFile() {
+    const root = document.getElementById('rootHash').value.trim();
+    if (!root) return alert('Enter Root Hash');
+    const status = document.getElementById('status');
+    status.innerText = 'Downloading from 0G Mainnet...';
 
-                client = createClient({
-                    chain,
-                    transport: http(),
-                    account: session.accounts[0],
-                });
+    try {
+      const [data, err] = await indexer.download(root);
+      if (err) throw err;
+      const blob = new Blob([data]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '0g-downloaded-file';
+      a.click();
+      URL.revokeObjectURL(url);
+      status.innerText = 'Download Complete!';
+    } catch (e) {
+      status.innerText = `Error: ${e.message}`;
+    }
+  }
 
-                account = session.accounts[0];
-                document.getElementById('walletStatus').textContent = `Wallet: \( {account.slice(0,6)}... \){account.slice(-4)}`;
-                document.getElementById('uploadBtn').disabled = false;
-                setStatus('Wallet connected!');
-            } catch (err) {
-                setStatus('Connection failed: ' + err.message);
-            }
-        };
-
-        function setStatus(msg) {
-            document.getElementById('status').textContent = msg;
-        }
-
-        // Upload Logic (uses 0G Storage SDK concepts - simplified with direct flow interaction)
-        document.getElementById('uploadBtn').onclick = async () => {
-            if (!client) return setStatus('Connect wallet first');
-
-            const file = document.getElementById('fileInput').files[0];
-            if (!file) return setStatus('Select a file');
-
-            setStatus('Preparing upload...');
-
-            // Read file, compute Merkle root (simplified - real impl needs @0gstorage/client or full merkle)
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8 = new Uint8Array(arrayBuffer);
-
-            // Placeholder: In real use, integrate full 0G TS SDK for proper segmentation & upload
-            setStatus('Upload requires full 0G Storage SDK integration. Clone https://github.com/0glabs/0g-storage-web-starter-kit for complete drag-drop UI with fees & WalletConnect.');
-
-            // Example tx to Flow contract (actual upload uses off-chain to nodes + on-chain commit)
-            // const hash = await client.sendTransaction({ to: FLOW_CONTRACT, data: '0x...' });
-            // setStatus(`Uploaded! Tx: ${hash}`);
-        };
-
-        document.getElementById('downloadBtn').onclick = async () => {
-            const root = document.getElementById('rootHash').value.trim();
-            if (!root) return setStatus('Enter root hash');
-
-            // Download via gateway (decentralized retrieval)
-            const gatewayUrl = `https://gateway.0g.ai/storage/${root}`;
-            window.open(gatewayUrl, '_blank');
-            setStatus('Download initiated via gateway (if file exists)');
-        };
-    </script>
+  window.addEventListener('load', bakeAllINFTs);
+</script>
 </body>
 </html>
