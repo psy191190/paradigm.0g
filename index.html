@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paradigm 0G - Zero Gravity Agents</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <script type="module">
+        import { createAppKit } from 'https://esm.sh/@reown/appkit'
+        import { Ethers5Adapter } from 'https://esm.sh/@reown/appkit-adapter-ethers5'
+
+        const ogAristotle = {
+            id: 16661,
+            name: '0G Aristotle',
+            nativeCurrency: { name: '0G', symbol: '0G', decimals: 18 },
+            rpcUrls: { default: { http: ['https://evmrpc.0g.ai'] } }
+        }
+
+        const modal = createAppKit({
+            adapters: [new Ethers5Adapter()],
+            networks: [ogAristotle],
+            projectId: 'f949826372f883f36a87c1266205e94b', 
+            features: { analytics: false }
+        })
+
+        // --- BAKED-IN MULTI-iNFT DATABASE ---
+        const INFT_DATABASE = {
+            "1": {
+                name: "Zero-Knowledge AI Consensus Protocol",
+                passport: "TEST-001",
+                cid: "0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658",
+                sig: "0x97e08510a036e0607a9cc2dd811cb33b3247d55ba1733748f8aef0047d692064"
+            },
+            "2": {
+                name: "Decentralized Storage Optimisation",
+                passport: "1761793985109",
+                cid: "0xda25a5f5ea40e210db8a662801647b655dd2d1030ab89285441c74ced13e2945", // Fixed from your earlier data
+                sig: "0xf3b10318167418c2995c9e96d903156356a7f32f9a50bee3601faf56e6ec6a8b"
+            },
+            "3": {
+                name: "Quantum-Resistant Blockchain Signatures",
+                passport: "1761846773817",
+                cid: "0xbf02c1cab5034303eccda34e461e0f65c3277c217023979ca1901f57ce6ba6b0",
+                sig: "0x731e410375e3066e67a3757773ed97f3c8f366d990a50e441418fa50aaed7f92"
+            },
+            "4": {
+                name: "Bio-Inspired Consensus Mechanisms",
+                passport: "1761966502531",
+                cid: "0x175dce81758f5c91c49fb8a0c4af35653bdf92fc21a02daf53adcc3004c0b57c",
+                sig: "0x536664f67d153431c4e7fb09b5d288118aea6c4f0b2dfed1b87ae5968e018d36"
+            }
+        };
+
+        let currentId = "3";
+
+        async function updateUI() {
+            const address = modal.getAddress();
+            const connectBtn = document.getElementById('connect-btn');
+            const statusLed = document.getElementById('status-led');
+            const mainPanel = document.getElementById('main-panel');
+
+            if (address) {
+                connectBtn.innerText = "IDENTITY VERIFIED: " + address.slice(0, 6);
+                statusLed.style.background = "#00ff00";
+                mainPanel.style.display = "block";
+                renderActiveiNFT();
+            }
+        }
+
+        function renderActiveiNFT() {
+            const data = INFT_DATABASE[currentId];
+            document.getElementById('display-name').innerText = data.name;
+            document.getElementById('display-passport').innerText = "ID: " + data.passport;
+            document.getElementById('display-cid').innerText = data.cid.slice(0,24) + "...";
+            document.getElementById('display-sig').innerText = data.sig.slice(0,24) + "...";
+        }
+
+        window.changeToken = (id) => {
+            currentId = id;
+            renderActiveiNFT();
+        }
+
+        window.addEventListener('load', () => {
+            document.getElementById('connect-btn').onclick = () => modal.open();
+            setInterval(updateUI, 1000);
+        });
+
+        window.handleStorageAction = (action) => {
+            const data = INFT_DATABASE[currentId];
+            const rawCid = data.cid.slice(2); // Strip 0x for potential gateway
+            if (action === 'PULL_DOWNLOAD') {
+                // Manual pull link (if 0G gateway exists) or copy for SDK
+                alert(`PULL DATA for \( {data.name}\nRaw CID: \){rawCid}\nCopy and use with 0G SDK to fetch file.\nTry: https://indexer-storage.0g.ai/download?cid=${rawCid} (if supported)`);
+                // Open potential download
+                window.open(`https://indexer-storage.0g.ai/download?cid=${rawCid}`, '_blank');
+            } else {
+                alert(`PUSH not implemented yet (requires wallet signer & gas)`);
+            }
+        }
+    </script>
+    <style>
+        /* Your original style unchanged */
+        body { background: #030303; color: #00ffcc; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .terminal { border: 1px solid #00ffcc; padding: 20px; width: 420px; background: #000; box-shadow: 0 0 30px rgba(0,255,204,0.1); }
+        .header { border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 20px; font-size: 12px; display: flex; justify-content: space-between; }
+        #status-led { width: 8px; height: 8px; background: #333; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .selector { display: flex; gap: 5px; margin-bottom: 15px; }
+        .sel-btn { flex: 1; background: #111; color: #00ffcc; border: 1px solid #333; padding: 5px; cursor: pointer; font-size: 10px; }
+        .sel-btn:hover { border-color: #00ffcc; }
+        .data-screen { background: #080808; border: 1px solid #111; padding: 15px; font-size: 11px; }
+        .label { color: #666; display: block; margin-top: 8px; font-size: 9px; text-transform: uppercase; }
+        .value { color: #00ffcc; word-break: break-all; }
+        button#connect-btn { background: #00ffcc; color: #000; border: none; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .action-btn { background: none; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; width: 48%; cursor: pointer; margin-top: 15px; font-size: 10px; font-weight: bold; }
+        .action-btn.fill { background: #00ffcc; color: #000; }
+    </style>
+</head>
+<body>
+    <!-- Your body unchanged -->
+    <div class="terminal">
+        <div class="header">
+            <span><div id="status-led"></div> 0G-ARISTOTLE-ACTIVE</span>
+            <span>iNFTs Powered By Zero Gravity</span>
+        </div>
+
+        <button id="connect-btn">Unlock The Future</button>
+
+        <div id="main-panel" style="display:none;">
+            <div class="label" style="text-align: center; margin-bottom: 5px;">Select iNFT Research Asset</div>
+            <div class="selector">
+                <button class="sel-btn" onclick="changeToken('1')">TOKEN 1</button>
+                <button class="sel-btn" onclick="changeToken('2')">TOKEN 2</button>
+                <button class="sel-btn" onclick="changeToken('3')">TOKEN 3</button>
+                <button class="sel-btn" onclick="changeToken('4')">TOKEN 4</button>
+            </div>
+
+            <div class="data-screen">
+                <span class="label">Research Protocol:</span>
+                <span id="display-name" class="value" style="font-size: 14px; font-weight: bold;"></span>
+                
+                <span id="display-passport" class="value" style="display:block; margin-top: 2px; color: #888;"></span>
+                
+                <span class="label">Storage Key (CID):</span>
+                <span id="display-cid" class="value"></span>
+
+                <span class="label">Quantum Signature:</span>
+                <span id="display-sig" class="value"></span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between;">
+                <button class="action-btn fill" onclick="handleStorageAction('PUSH_UPLOAD')">PUSH TO 0G</button>
+                <button class="action-btn" onclick="handleStorageAction('PULL_DOWNLOAD')">PULL DATA</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
